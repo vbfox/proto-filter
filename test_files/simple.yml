@@ -1,0 +1,11 @@
+include:
+    - simple.proto:
+        - SearchResponse
+exclude:
+    - simple.proto:
+        - SearchResponse:
+            - useless
+        - SearchRequest:
+            - page_number
+        - Result:
+            - snippets

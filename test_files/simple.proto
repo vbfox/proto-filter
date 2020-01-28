@@ -7,11 +7,18 @@ message SearchRequest {
 }
 
 message SearchResponse {
-    repeated Result results = 1;
+  repeated Result results = 1;
+  // Original request
+  SearchRequest request = 2;
+  int32 useless = 3;
 }
-  
+
+message Snippet {
+    string text = 1;
+}
+
 message Result {
-    string url = 1;
-    string title = 2;
-    repeated string snippets = 3;
+  string url = 1;
+  string title = 2;
+  repeated Snippet snippets = 3;
 }
