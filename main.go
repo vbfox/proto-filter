@@ -9,9 +9,10 @@ import (
 	dpb "github.com/golang/protobuf/protoc-gen-go/descriptor"
 	"github.com/jhump/protoreflect/desc"
 	_ "github.com/jhump/protoreflect/desc/builder"
+	"github.com/jhump/protoreflect/desc/protoprint"
 )
 
-func loadProtoset(path string) (*desc.FileDescriptor, error) {
+func loadFileDescriptorSet(path string) (*dpb.FileDescriptorSet, error) {
 	var fds dpb.FileDescriptorSet
 	f, err := os.Open(path)
 	if err != nil {
@@ -25,14 +26,31 @@ func loadProtoset(path string) (*desc.FileDescriptor, error) {
 	if err = proto.Unmarshal(bb, &fds); err != nil {
 		return nil, err
 	}
-	return desc.CreateFileDescriptorFromSet(&fds)
+
+	return &fds, nil
+}
+
+func loadProtoSet(path string) (*desc.FileDescriptor, error) {
+	fds, err := loadFileDescriptorSet(path)
+	if err != nil {
+		return nil, err
+	}
+	return desc.CreateFileDescriptorFromSet(fds)
+}
+
+func outputSet(set *desc.FileDescriptor) {
+	printer := protoprint.Printer{}
+	fdsArray := []*desc.FileDescriptor{set}
+	printer.PrintProtosToFileSystem(fdsArray, "./out")
+	fmt.Println("Printed set to ./out", set.GetFullyQualifiedName())
 }
 
 func main() {
-	set, err := loadProtoset("test_files/simple.fdset")
+	set, err := loadProtoSet("test_files/simple.fdset")
 	if err != nil {
 		fmt.Println("Error:", err.Error())
 	}
 
 	fmt.Println("Loaded set", set.GetFullyQualifiedName())
+	outputSet(set)
 }
