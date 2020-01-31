@@ -1,8 +1,8 @@
-package main
+package configuration
 
 import (
-	"testing"
 	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
 func TestEmptyGetTopLevel(t *testing.T) {
