@@ -1,8 +1,8 @@
 package configuration
 
 type FilterTreeNode struct {
-	name     string
-	children []*FilterTreeNode
+	Name     string
+	Children []*FilterTreeNode
 }
 
 func NewFilterTreeNode(name string, children ...*FilterTreeNode) *FilterTreeNode {
@@ -10,14 +10,14 @@ func NewFilterTreeNode(name string, children ...*FilterTreeNode) *FilterTreeNode
 		children = []*FilterTreeNode{}
 	}
 	return &FilterTreeNode{
-		name:     name,
-		children: children,
+		Name:     name,
+		Children: children,
 	}
 }
 
 type Configuration struct {
-	include []*FilterTreeNode
-	exclude []*FilterTreeNode
+	Include []*FilterTreeNode
+	Exclude []*FilterTreeNode
 }
 
 func NewConfiguration(include []*FilterTreeNode, exclude []*FilterTreeNode) *Configuration {
@@ -28,8 +28,8 @@ func NewConfiguration(include []*FilterTreeNode, exclude []*FilterTreeNode) *Con
 		exclude = []*FilterTreeNode{}
 	}
 	return &Configuration{
-		include: include,
-		exclude: exclude,
+		Include: include,
+		Exclude: exclude,
 	}
 }
 
@@ -43,7 +43,7 @@ const (
 )
 
 func (node *FilterTreeNode) isLeaf() bool {
-	return len(node.children) == 0
+	return len(node.Children) == 0
 }
 
 func findTreeNode(nodes []*FilterTreeNode, name string) *FilterTreeNode {
@@ -52,7 +52,7 @@ func findTreeNode(nodes []*FilterTreeNode, name string) *FilterTreeNode {
 	}
 
 	for _, n := range nodes {
-		if n.name == name {
+		if n.Name == name {
 			return n
 		}
 	}
@@ -86,16 +86,16 @@ func isIncludedCore(include []*FilterTreeNode, exclude []*FilterTreeNode, path [
 	childrenPath := path[1:]
 	var childrenInclude []*FilterTreeNode = nil
 	if includeElement != nil {
-		childrenInclude = includeElement.children
+		childrenInclude = includeElement.Children
 	}
 	var childrenExclude []*FilterTreeNode = nil
 	if excludeElement != nil {
-		childrenExclude = excludeElement.children
+		childrenExclude = excludeElement.Children
 	}
 
 	return isIncludedCore(childrenInclude, childrenExclude, childrenPath)
 }
 
 func (config *Configuration) IsIncluded(path ...string) InclusionResult {
-	return isIncludedCore(config.include, config.exclude, path)
+	return isIncludedCore(config.Include, config.Exclude, path)
 }
