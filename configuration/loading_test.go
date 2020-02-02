@@ -10,7 +10,7 @@ func TestEmptyFile(t *testing.T) {
 	assert := require.New(t)
 
 	yml := ``
-	result, err := LoadConfiguration(yml)
+	result, err := LoadConfiguration([]byte(yml))
 	assert.NoError(err)
 	assert.NotNil(result)
 	assert.NotNil(result.Include)
@@ -28,7 +28,7 @@ include:
 exclude:
     - b
 `
-	result, err := LoadConfiguration(yml)
+	result, err := LoadConfiguration([]byte(yml))
 	assert.NoError(err)
 	assert.NotNil(result)
 	assert.Len(result.Include, 1)
@@ -57,7 +57,7 @@ exclude:
         - SearchRequest:
             - "*"
 `
-	result, err := LoadConfiguration(yml)
+	result, err := LoadConfiguration([]byte(yml))
 	assert.NoError(err)
 	assert.NotNil(result)
 	assert.Len(result.Include, 1)

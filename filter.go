@@ -10,6 +10,7 @@ import (
 	"github.com/jhump/protoreflect/desc"
 	_ "github.com/jhump/protoreflect/desc/builder"
 	"github.com/jhump/protoreflect/desc/protoprint"
+	"github.com/vbfox/proto-filter/configuration"
 )
 
 func loadFileDescriptorSet(path string) (*dpb.FileDescriptorSet, error) {
@@ -43,4 +44,8 @@ func OutputSet(set *desc.FileDescriptor) {
 	fdsArray := []*desc.FileDescriptor{set}
 	printer.PrintProtosToFileSystem(fdsArray, "./out")
 	fmt.Println("Printed set to ./out", set.GetFullyQualifiedName())
+}
+
+func FilterSet(set *desc.FileDescriptor, config *configuration.Configuration) (*desc.FileDescriptor, error) {
+	return set, nil
 }

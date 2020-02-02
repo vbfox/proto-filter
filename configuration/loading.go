@@ -3,6 +3,7 @@ package configuration
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 
 	"github.com/goccy/go-yaml"
 	"github.com/goccy/go-yaml/ast"
@@ -135,7 +136,7 @@ func filterTreeYamlArrayToFilterTreeArray(yaml []*filterTreeYaml) []*FilterTreeN
 	return result
 }
 
-func LoadConfiguration(content string) (*Configuration, error) {
+func LoadConfiguration(content []byte) (*Configuration, error) {
 	var config configurationYaml
 	if err := yaml.Unmarshal([]byte(content), &config); err != nil {
 		return nil, err
@@ -147,4 +148,13 @@ func LoadConfiguration(content string) (*Configuration, error) {
 	)
 
 	return result, nil
+}
+
+func LoadConfigurationFile(path string) (*Configuration, error) {
+	content, err := ioutil.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("Can't load file %s: %w", path, err)
+	}
+
+	return LoadConfiguration(content)
 }
