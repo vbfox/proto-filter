@@ -1,2 +1,2 @@
-/proto-filter
-/out/
+/cmd/proto-filter/proto-filter*
+/cmd/proto-filter/out/

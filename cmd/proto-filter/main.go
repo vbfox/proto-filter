@@ -7,9 +7,10 @@ import (
 )
 
 func main() {
-	set, err := protofilter.LoadProtoSet("test_files/simple.fdset")
+	set, err := protofilter.LoadProtoSet("../../test_files/simple.fdset")
 	if err != nil {
 		fmt.Println("Error:", err.Error())
+		return
 	}
 
 	fmt.Println("Loaded set", set.GetFullyQualifiedName())
