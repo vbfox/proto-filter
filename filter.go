@@ -1,4 +1,4 @@
-package main
+package protofilter
 
 import (
 	"fmt"
@@ -30,7 +30,7 @@ func loadFileDescriptorSet(path string) (*dpb.FileDescriptorSet, error) {
 	return &fds, nil
 }
 
-func loadProtoSet(path string) (*desc.FileDescriptor, error) {
+func LoadProtoSet(path string) (*desc.FileDescriptor, error) {
 	fds, err := loadFileDescriptorSet(path)
 	if err != nil {
 		return nil, err
@@ -38,19 +38,9 @@ func loadProtoSet(path string) (*desc.FileDescriptor, error) {
 	return desc.CreateFileDescriptorFromSet(fds)
 }
 
-func outputSet(set *desc.FileDescriptor) {
+func OutputSet(set *desc.FileDescriptor) {
 	printer := protoprint.Printer{}
 	fdsArray := []*desc.FileDescriptor{set}
 	printer.PrintProtosToFileSystem(fdsArray, "./out")
 	fmt.Println("Printed set to ./out", set.GetFullyQualifiedName())
-}
-
-func main() {
-	set, err := loadProtoSet("test_files/simple.fdset")
-	if err != nil {
-		fmt.Println("Error:", err.Error())
-	}
-
-	fmt.Println("Loaded set", set.GetFullyQualifiedName())
-	outputSet(set)
 }
