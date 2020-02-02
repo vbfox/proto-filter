@@ -11,7 +11,7 @@ func TestEmptyFile(t *testing.T) {
 
 	yml := ``
 	result, err := LoadConfiguration(yml)
-	assert.Nil(err)
+	assert.NoError(err)
 	assert.NotNil(result)
 	assert.NotNil(result.Include)
 	assert.Empty(result.Include)
@@ -28,7 +28,8 @@ include:
 exclude:
     - b
 `
-	result, _ := LoadConfiguration(yml)
+	result, err := LoadConfiguration(yml)
+	assert.NoError(err)
 	assert.NotNil(result)
 	assert.Len(result.Include, 1)
 
@@ -56,7 +57,8 @@ exclude:
         - SearchRequest:
             - "*"
 `
-	result, _ := LoadConfiguration(yml)
+	result, err := LoadConfiguration(yml)
+	assert.NoError(err)
 	assert.NotNil(result)
 	assert.Len(result.Include, 1)
 
@@ -74,8 +76,8 @@ exclude:
 	exclude1 := result.Exclude[0]
 	assert.Equal(exclude1.Name, "simple.proto")
 	assert.Len(exclude1.Children, 1)
-	assert.Equal(exclude1.Children[1].Name, "SearchRequest")
-	assert.Len(exclude1.Children[1].Children, 1)
-	assert.Equal(exclude1.Children[1].Children[0].Name, "*")
-	assert.True(exclude1.Children[1].Children[0].isLeaf())
+	assert.Equal(exclude1.Children[0].Name, "SearchRequest")
+	assert.Len(exclude1.Children[0].Children, 1)
+	assert.Equal(exclude1.Children[0].Children[0].Name, "*")
+	assert.True(exclude1.Children[0].Children[0].isLeaf())
 }
