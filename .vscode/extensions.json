@@ -2,6 +2,7 @@
     "recommendations": [
         "ms-vscode.go",
         "redhat.vscode-yaml",
-        "EditorConfig.EditorConfig"
+        "EditorConfig.EditorConfig",
+        "zxh404.vscode-proto3"
     ]
 }
