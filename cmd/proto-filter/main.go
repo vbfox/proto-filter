@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 
+	"github.com/jhump/protoreflect/desc"
 	protofilter "github.com/vbfox/proto-filter"
 	"github.com/vbfox/proto-filter/configuration"
 )
@@ -21,7 +22,7 @@ func main() {
 	}
 
 	fmt.Println("Loaded set", set.GetFullyQualifiedName())
-	filtered, err := protofilter.FilterSet(set, config)
+	filtered, err := protofilter.FilterSet([]*desc.FileDescriptor{set}, config)
 	if err != nil {
 		fmt.Println("ERR Filter:", err.Error())
 		return

@@ -39,13 +39,12 @@ func LoadProtoSet(path string) (*desc.FileDescriptor, error) {
 	return desc.CreateFileDescriptorFromSet(fds)
 }
 
-func OutputSet(set *desc.FileDescriptor) {
+func OutputSet(set []*desc.FileDescriptor) {
 	printer := protoprint.Printer{}
-	fdsArray := []*desc.FileDescriptor{set}
-	printer.PrintProtosToFileSystem(fdsArray, "./out")
-	fmt.Println("Printed set to ./out", set.GetFullyQualifiedName())
+	printer.PrintProtosToFileSystem(set, "./out")
+	fmt.Println("Printed set to ./out")
 }
 
-func FilterSet(set *desc.FileDescriptor, config *configuration.Configuration) (*desc.FileDescriptor, error) {
+func FilterSet(set []*desc.FileDescriptor, config *configuration.Configuration) ([]*desc.FileDescriptor, error) {
 	return set, nil
 }
