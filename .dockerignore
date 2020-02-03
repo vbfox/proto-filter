@@ -1,0 +1,3 @@
+/.vscode/
+/cmd/proto-filter/proto-filter*
+/cmd/proto-filter/out/
