@@ -1,0 +1,6 @@
+include:
+  - test.proto:
+    - SearchRequest
+exclude:
+  - test.proto:
+    - page_number
