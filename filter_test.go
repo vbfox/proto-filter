@@ -94,20 +94,168 @@ func runSimpleTest(t *testing.T, config string, input string, expected string) {
 func TestIncludeEverything(t *testing.T) {
 	runSimpleTest(
 		t,
-		`include:
+		`---
+include:
   - test.proto:
-    - a
+    - msg_a
 `,
 		`syntax = "proto3";
 
-message a {
-  string b = 1;
+message msg_a {
+  string field_a_1 = 1;
+
+  string field_a_2 = 2;
 }
 `,
 		`syntax = "proto3";
 
-message a {
-  string b = 1;
+message msg_a {
+  string field_a_1 = 1;
+
+  string field_a_2 = 2;
+}
+`,
+	)
+}
+
+func TestExcludeField(t *testing.T) {
+	runSimpleTest(
+		t,
+		`---
+include:
+  - test.proto:
+    - msg_a
+exclude:
+  - test.proto:
+    - msg_a:
+      - field_2
+`,
+		`syntax = "proto3";
+
+message msg_a {
+  string field_a_1 = 1;
+
+  string field_a_2 = 2;
+}
+`,
+		`syntax = "proto3";
+
+message msg_a {
+  string field_a_1 = 1;
+}
+`,
+	)
+}
+
+func TestPartialIncludeMessage(t *testing.T) {
+	runSimpleTest(
+		t,
+		`---
+include:
+  - test.proto:
+    - msg_a
+`,
+		`syntax = "proto3";
+
+message msg_a {
+  string field_a_1 = 1;
+}
+
+message msg_b {
+    string field_b_1 = 1;
+  }
+`,
+		`syntax = "proto3";
+
+message msg_a {
+  string field_a_1 = 1;
+}
+`,
+	)
+}
+
+func TestPartialIncludeField(t *testing.T) {
+	runSimpleTest(
+		t,
+		`---
+include:
+  - test.proto:
+    - msg_a:
+      - field_a_1
+`,
+		`syntax = "proto3";
+
+message msg_a {
+  string field_a_1 = 1;
+
+  string field_a_2 = 2;
+}
+`,
+		`syntax = "proto3";
+
+message msg_a {
+  string field_a_1 = 1;
+}
+`,
+	)
+}
+
+func TestPartialNested(t *testing.T) {
+	runSimpleTest(
+		t,
+		`---
+include:
+  - test.proto:
+    - msg_a:
+      - msg_b
+`,
+		`syntax = "proto3";
+
+message msg_a {
+  message msg_b {
+    string field_b_1 = 1;
+  }
+
+  string field_a_1 = 1;
+}
+`,
+		`syntax = "proto3";
+
+message msg_a {
+  message msg_b {
+    string field_b_1 = 1;
+  }
+}
+`,
+	)
+}
+
+func TestMessageReference(t *testing.T) {
+	runSimpleTest(
+		t,
+		`---
+include:
+  - test.proto:
+    - msg_a
+`,
+		`syntax = "proto3";
+
+message msg_a {
+  msg_b field_a_1 = 1;
+}
+
+message msg_b {
+  string field_b_1 = 1;
+}
+`,
+		`syntax = "proto3";
+
+message msg_a {
+  msg_b field_a_1 = 1;
+}
+
+message msg_b {
+  string field_b_1 = 1;
 }
 `,
 	)
