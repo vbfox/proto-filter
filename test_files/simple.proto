@@ -1,11 +1,21 @@
+/* A simple proto file to demonstrate filtering */
 syntax = "proto3";
 
+/* My own package ! */
+package fox.pkg;
+
+/* SearchRequest represents a search query, with pagination options to
+ * indicate which results to include in the response. */
 message SearchRequest {
+  // Text of the query
   string query = 1;
   int32 page_number = 2;
   int32 result_per_page = 3;
 }
 
+/*
+ * Response to a search
+ */
 message SearchResponse {
   repeated Result results = 1;
   // Original request
