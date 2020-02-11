@@ -56,7 +56,7 @@ include:
 exclude:
   - test.proto:
     - msg_a:
-      - field_2
+      - field_a_2
 `,
 		`syntax = "proto3";
 

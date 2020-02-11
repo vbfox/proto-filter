@@ -1,5 +1,7 @@
 package configuration
 
+import "fmt"
+
 type FilterTreeNode struct {
 	Name     string
 	Children []*FilterTreeNode
@@ -61,8 +63,9 @@ func findTreeNode(nodes []*FilterTreeNode, name string) *FilterTreeNode {
 
 func isIncludedCore(include []*FilterTreeNode, exclude []*FilterTreeNode, path []string) InclusionResult {
 	pathElement := path[0]
-	includeElement := findTreeNode(include, pathElement)
-	excludeElement := findTreeNode(exclude, pathElement)
+    includeElement := findTreeNode(include, pathElement)
+    excludeElement := findTreeNode(exclude, pathElement)
+    fmt.Printf("IsIncluded %v, Included=%v, Excluded=%v\n", path, includeElement, excludeElement)
 
 	if len(path) == 1 {
 		if includeElement != nil && includeElement.isLeaf() {

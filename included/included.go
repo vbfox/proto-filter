@@ -47,9 +47,11 @@ func isIncluded(v inclusionType) bool {
 
 func (b *filterBuilder) includeAny(path []string, includedByParent bool) (bool, bool, error) {
 	pathString := buildPath(path)
-	configuredInclusion := b.configuration.IsIncluded(path...)
+    configuredInclusion := b.configuration.IsIncluded(path...)
 
-	existingValue := b.getInclusion(pathString)
+    existingValue := b.getInclusion(pathString)
+
+    fmt.Printf("Configured inclusion for %v: %v (Existing = %v)\n", pathString, configuredInclusion, existingValue)
 
 	if configuredInclusion == configuration.Excluded {
 		if isIncluded(existingValue) {
@@ -80,9 +82,43 @@ func (b *filterBuilder) includeAny(path []string, includedByParent bool) (bool, 
 	return true, childInclude, nil
 }
 
+func reverseStringSlice(ss []string) {
+	last := len(ss) - 1
+	for i := 0; i < len(ss)/2; i++ {
+		ss[i], ss[last-i] = ss[last-i], ss[i]
+	}
+}
+
+func getDescriptorPath(descriptor desc.Descriptor) []string {
+	result := []string{}
+	current := descriptor.GetParent()
+	for {
+		if current == nil {
+			break
+		}
+		result = append(result, current.GetName())
+		current = current.GetParent()
+    }
+    reverseStringSlice(result)
+    return result
+}
+
 func (b *filterBuilder) includeField(descriptor *desc.FieldDescriptor, path []string, includedByParent bool) error {
 	currentPath := append(path, descriptor.GetName())
-	_, _, err := b.includeAny(currentPath, includedByParent)
+	ok, childInclude, err := b.includeAny(currentPath, includedByParent)
+	if !ok {
+		return err
+    }
+
+    messageType := descriptor.GetMessageType()
+    fmt.Printf("Handling field at %v messageType = %v\n", currentPath, messageType)
+	if messageType != nil {
+        err := b.includeMessage(messageType, getDescriptorPath(messageType), childInclude)
+        if err != nil {
+            return err
+        }
+	}
+
 	return err
 }
 
@@ -136,6 +172,44 @@ func (b *filterBuilder) includeEnum(descriptor *desc.EnumDescriptor, path []stri
 	return nil
 }
 
+func (b *filterBuilder) includeServiceMethod(descriptor *desc.MethodDescriptor, path []string, includedByParent bool) error {
+	currentPath := append(path, descriptor.GetName())
+	ok, childInclude, err := b.includeAny(currentPath, includedByParent)
+	if !ok {
+		return err
+	}
+
+    inputType := descriptor.GetInputType()
+    err = b.includeMessage(inputType, getDescriptorPath(inputType), childInclude)
+    if err != nil {
+        return err
+    }
+
+    outputType := descriptor.GetInputType()
+    err = b.includeMessage(outputType, getDescriptorPath(outputType), childInclude)
+    if err != nil {
+        return err
+    }
+
+	return nil
+}
+
+func (b *filterBuilder) includeService(descriptor *desc.ServiceDescriptor, path []string, includedByParent bool) error {
+	currentPath := append(path, descriptor.GetName())
+	ok, childInclude, err := b.includeAny(currentPath, includedByParent)
+	if !ok {
+		return err
+	}
+
+	for _, method := range descriptor.GetMethods() {
+		if err := b.includeServiceMethod(method, currentPath, childInclude); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (b *filterBuilder) includeFileDescriptor(descriptor *desc.FileDescriptor, path []string, includedByParent bool) error {
 	currentPath := append(path, descriptor.GetName())
 	ok, childInclude, err := b.includeAny(currentPath, includedByParent)
@@ -151,6 +225,12 @@ func (b *filterBuilder) includeFileDescriptor(descriptor *desc.FileDescriptor, p
 
 	for _, enum := range descriptor.GetEnumTypes() {
 		if err := b.includeEnum(enum, currentPath, childInclude); err != nil {
+			return err
+		}
+    }
+
+	for _, service := range descriptor.GetServices() {
+		if err := b.includeService(service, currentPath, childInclude); err != nil {
 			return err
 		}
 	}
