@@ -321,7 +321,7 @@ service svc_a {
 + test.proto/msg_a/field_a_1
 + test.proto/msg_b
 + test.proto/msg_b/field_b_1
-+ test.proto/msg_b
++ test.proto/svc_a
 + test.proto/svc_a/method_a_1
 `,
 	)
@@ -335,7 +335,7 @@ include:
   - test.proto:
     - svc_a
 exclude:
-  - test.proto
+  - test.proto:
     - svc_a:
       - method_a_2
 `,
@@ -367,7 +367,8 @@ service svc_a {
 + test.proto/msg_a/field_a_1
 + test.proto/msg_b
 + test.proto/msg_b/field_b_1
-+ test.proto/msg_b
+- test.proto/msg_c
++ test.proto/svc_a
 + test.proto/svc_a/method_a_1
 - test.proto/svc_a/method_a_2
 + test.proto/svc_a/method_a_3

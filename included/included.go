@@ -2,6 +2,7 @@ package included
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/jhump/protoreflect/desc"
 	"github.com/vbfox/proto-filter/configuration"
@@ -16,9 +17,19 @@ const (
 	inclusionType_excluded_explicit
 )
 
+func (s inclusionType) String() string {
+	return [...]string{
+		"inclusionType_unknown",
+		"inclusionType_included_implicit",
+		"inclusionType_included_explicit",
+		"inclusionType_excluded_explicit",
+	}[s]
+}
+
 type filterBuilder struct {
-	configuration *configuration.Configuration
-	inclusionMap  map[string]inclusionType
+	configuration   *configuration.Configuration
+	isIncludedCache map[string]configuration.InclusionResult
+	inclusionMap    map[string]inclusionType
 }
 
 func buildPath(parts []string) string {
@@ -41,45 +52,90 @@ func (b *filterBuilder) getInclusion(path string) inclusionType {
 	return existingValue
 }
 
+func (b *filterBuilder) getIsIncludedFromCache(path string) configuration.InclusionResult {
+	existing, ok := b.isIncludedCache[path]
+	if ok {
+		return existing
+	}
+
+	value := b.configuration.IsIncluded(strings.Split(path, "/")...)
+	b.isIncludedCache[path] = value
+	return value
+}
+
 func isIncluded(v inclusionType) bool {
 	return v == inclusionType_included_implicit || v == inclusionType_included_explicit
 }
 
-func (b *filterBuilder) includeAny(path []string, includedByParent bool) (bool, bool, error) {
-	pathString := buildPath(path)
-    configuredInclusion := b.configuration.IsIncluded(path...)
+type inclusionComputationResult struct {
+	configuredInclusion configuration.InclusionResult
+	existingValue       inclusionType
+	newValue            inclusionType
+	needToBeExplored    bool
+	childInclude        bool
+}
 
-    existingValue := b.getInclusion(pathString)
+func (b *filterBuilder) computeInclusionType(pathString string, includedByParent bool) (inclusionComputationResult, error) {
+	result := inclusionComputationResult{}
 
-    fmt.Printf("Configured inclusion for %v: %v (Existing = %v)\n", pathString, configuredInclusion, existingValue)
+	configuredInclusion := b.getIsIncludedFromCache(pathString)
+	existingValue := b.getInclusion(pathString)
+
+	result.configuredInclusion = configuredInclusion
+	result.existingValue = existingValue
+	result.childInclude = includedByParent || (configuredInclusion == configuration.IncludedWithChildren)
+
+	fmt.Printf("\n")
+	fmt.Printf("[%v]\n", pathString)
+	fmt.Printf("Configured inclusion:%v (Existing = %v)\n", configuredInclusion, existingValue)
 
 	if configuredInclusion == configuration.Excluded {
 		if isIncluded(existingValue) {
-			return false, false, fmt.Errorf("Element at path %s was included and is now found as excluded", pathString)
+			return result, fmt.Errorf("Element at path %s was included and is now found as excluded", pathString)
 		}
 
-		b.inclusionMap[pathString] = inclusionType_excluded_explicit
-		return false, false, nil
+		result.newValue = inclusionType_excluded_explicit
+		result.needToBeExplored = false
+		return result, nil
 	}
 
 	if (configuredInclusion == configuration.IncludedWithChildren) || includedByParent {
 		if existingValue == inclusionType_excluded_explicit {
-			return false, false, fmt.Errorf("Element at path %s was excluded and is now included", pathString)
+			return result, fmt.Errorf("Element at path %s was excluded and is now included", pathString)
 		}
 
-		b.inclusionMap[pathString] = inclusionType_included_explicit
+		result.newValue = inclusionType_included_explicit
+		result.needToBeExplored = !isIncluded(existingValue)
+		return result, nil
 	}
 
 	if configuredInclusion == configuration.IncludedWithoutChildren {
 		if existingValue == inclusionType_excluded_explicit {
-			return false, false, fmt.Errorf("Element at path %s was excluded and is now included", pathString)
+			return result, fmt.Errorf("Element at path %s was excluded and is now included", pathString)
 		}
 
-		b.inclusionMap[pathString] = inclusionType_included_implicit
+		result.newValue = inclusionType_included_implicit
+		result.needToBeExplored = !isIncluded(existingValue)
+		return result, nil
 	}
 
-	childInclude := includedByParent || (configuredInclusion == configuration.IncludedWithChildren)
-	return true, childInclude, nil
+	result.newValue = inclusionType_unknown
+	result.needToBeExplored = false
+	return result, nil
+}
+
+func (b *filterBuilder) includeAny(path []string, includedByParent bool) (bool, bool, error) {
+	pathString := buildPath(path)
+	result, err := b.computeInclusionType(pathString, includedByParent)
+	if err != nil {
+		return false, false, err
+	}
+
+	fmt.Printf("Inclusion result: %v: %+v\n", result.newValue, result)
+
+	b.inclusionMap[pathString] = result.newValue
+
+	return result.needToBeExplored, result.childInclude, nil
 }
 
 func reverseStringSlice(ss []string) {
@@ -98,9 +154,9 @@ func getDescriptorPath(descriptor desc.Descriptor) []string {
 		}
 		result = append(result, current.GetName())
 		current = current.GetParent()
-    }
-    reverseStringSlice(result)
-    return result
+	}
+	reverseStringSlice(result)
+	return result
 }
 
 func (b *filterBuilder) includeField(descriptor *desc.FieldDescriptor, path []string, includedByParent bool) error {
@@ -108,15 +164,14 @@ func (b *filterBuilder) includeField(descriptor *desc.FieldDescriptor, path []st
 	ok, childInclude, err := b.includeAny(currentPath, includedByParent)
 	if !ok {
 		return err
-    }
+	}
 
-    messageType := descriptor.GetMessageType()
-    fmt.Printf("Handling field at %v messageType = %v\n", currentPath, messageType)
+	messageType := descriptor.GetMessageType()
 	if messageType != nil {
-        err := b.includeMessage(messageType, getDescriptorPath(messageType), childInclude)
-        if err != nil {
-            return err
-        }
+		err := b.includeMessage(messageType, getDescriptorPath(messageType), childInclude)
+		if err != nil {
+			return err
+		}
 	}
 
 	return err
@@ -179,17 +234,17 @@ func (b *filterBuilder) includeServiceMethod(descriptor *desc.MethodDescriptor, 
 		return err
 	}
 
-    inputType := descriptor.GetInputType()
-    err = b.includeMessage(inputType, getDescriptorPath(inputType), childInclude)
-    if err != nil {
-        return err
-    }
+	inputType := descriptor.GetInputType()
+	err = b.includeMessage(inputType, getDescriptorPath(inputType), childInclude)
+	if err != nil {
+		return err
+	}
 
-    outputType := descriptor.GetInputType()
-    err = b.includeMessage(outputType, getDescriptorPath(outputType), childInclude)
-    if err != nil {
-        return err
-    }
+	outputType := descriptor.GetOutputType()
+	err = b.includeMessage(outputType, getDescriptorPath(outputType), childInclude)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -227,7 +282,7 @@ func (b *filterBuilder) includeFileDescriptor(descriptor *desc.FileDescriptor, p
 		if err := b.includeEnum(enum, currentPath, childInclude); err != nil {
 			return err
 		}
-    }
+	}
 
 	for _, service := range descriptor.GetServices() {
 		if err := b.includeService(service, currentPath, childInclude); err != nil {
@@ -238,10 +293,11 @@ func (b *filterBuilder) includeFileDescriptor(descriptor *desc.FileDescriptor, p
 	return nil
 }
 
-func buildInclusions(descriptors []*desc.FileDescriptor, configuration *configuration.Configuration) (map[string]inclusionType, error) {
+func buildInclusions(descriptors []*desc.FileDescriptor, cfg *configuration.Configuration) (map[string]inclusionType, error) {
 	builder := filterBuilder{
-		configuration: configuration,
-		inclusionMap:  make(map[string]inclusionType),
+		isIncludedCache: make(map[string]configuration.InclusionResult),
+		configuration:   cfg,
+		inclusionMap:    make(map[string]inclusionType),
 	}
 
 	for _, descriptor := range descriptors {
@@ -257,6 +313,13 @@ func buildInclusions(descriptors []*desc.FileDescriptor, configuration *configur
 // encountered and if they are included or not
 func BuildIncluded(descriptors []*desc.FileDescriptor, configuration *configuration.Configuration) (map[string]bool, error) {
 	result := make(map[string]bool)
+
+	fmt.Printf("==================================================================\n")
+	fmt.Printf("==================================================================\n")
+	fmt.Printf("==================================================================\n")
+	fmt.Printf("==================================================================\n")
+	fmt.Printf("==================================================================\n")
+	fmt.Printf("==================================================================\n")
 
 	inclusions, err := buildInclusions(descriptors, configuration)
 	if err != nil {
