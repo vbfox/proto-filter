@@ -172,17 +172,36 @@ func (b *filterBuilder) includeField(descriptor *desc.FieldDescriptor, path []st
 
 	messageType := descriptor.GetMessageType()
 	if messageType != nil {
-		err := b.includeMessage(messageType, getDescriptorPath(messageType), childInclude)
-		if err != nil {
-			return err
+		if messageType.IsMapEntry() {
+			keyMessage := descriptor.GetMapKeyType().GetMessageType()
+			if keyMessage != nil {
+				err = b.includeMessage(keyMessage, getDescriptorPath(keyMessage), childInclude)
+			}
+			if err == nil {
+				valueMessage := descriptor.GetMapValueType().GetMessageType()
+				err = b.includeMessage(valueMessage, getDescriptorPath(valueMessage), childInclude)
+			}
+		} else {
+			err = b.includeMessage(messageType, getDescriptorPath(messageType), childInclude)
 		}
 	}
 
-	return err
+	if err != nil {
+		return fmt.Errorf("Failed to include field %s: %w", currentPath, err)
+	}
+
+	return nil
 }
 
 func (b *filterBuilder) includeMessage(descriptor *desc.MessageDescriptor, path []string, includedByParent bool) error {
 	currentPath := append(path, descriptor.GetName())
+
+	if descriptor.IsMapEntry() {
+		// Map entry message types are generated for backward compatibility but we ignore them as we handle the map<,>
+		// type directly.
+		return nil
+	}
+
 	ok, childInclude, err := b.includeAny(currentPath, includedByParent)
 	if !ok {
 		return err
