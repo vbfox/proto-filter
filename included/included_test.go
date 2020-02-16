@@ -141,14 +141,13 @@ message msg_a {
 
 message msg_b {
     string field_b_1 = 1;
-  }
+}
 `,
 		`
 + test.proto
 + test.proto/msg_a
 + test.proto/msg_a/field_a_1
 - test.proto/msg_b
-- test.proto/msg_b/field_b_1
 `,
 	)
 }
@@ -204,7 +203,6 @@ message msg_a {
 - test.proto/msg_a/field_a_1
 + test.proto/msg_a/msg_b
 + test.proto/msg_a/msg_b/field_b_1
-- test.proto/msg_a/field_a_2
 `,
 	)
 }
