@@ -114,12 +114,16 @@ func (b *filterBuilder) computeInclusionType(pathString string, includedByParent
 			return result, fmt.Errorf("Element at path %s was excluded and is now included", pathString)
 		}
 
-		result.newValue = inclusionType_included_implicit
+		if existingValue == inclusionType_included_explicit {
+			result.newValue = inclusionType_included_explicit
+		} else {
+			result.newValue = inclusionType_included_implicit
+		}
 		result.needToBeExplored = !isIncluded(existingValue)
 		return result, nil
 	}
 
-	result.newValue = inclusionType_unknown
+	result.newValue = existingValue
 	result.needToBeExplored = false
 	return result, nil
 }

@@ -209,7 +209,7 @@ message msg_a {
 	)
 }
 
-func TestMessageReference(t *testing.T) {
+func TestMessageReferenceSimple(t *testing.T) {
 	runIncludedTest(
 		t,
 		`---
