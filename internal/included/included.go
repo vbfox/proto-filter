@@ -1,3 +1,8 @@
+// Package included is an intermediate step in the generation of filtered protobuf.
+//
+// The target is to take a configuration (Loaded from a configuration file) and a set of
+// protobuf file descriptors and generate a set of all the things (files, messages, enums, fields, ...)
+// that should be included in the filtered output.
 package included
 
 import (
@@ -6,15 +11,16 @@ import (
 
 	"github.com/jhump/protoreflect/desc"
 	"github.com/vbfox/proto-filter/configuration"
+	"github.com/vbfox/proto-filter/internal/utils"
 )
 
 type inclusionType int
 
 const (
-	inclusionType_unknown inclusionType = iota
-	inclusionType_included_implicit
-	inclusionType_included_explicit
-	inclusionType_excluded_explicit
+	inclusionTypeUnknown inclusionType = iota
+	inclusionTypeIncludedImplicit
+	inclusionTypeIncludedExplicit
+	inclusionTypeExcludedExplicit
 )
 
 func (s inclusionType) String() string {
@@ -32,26 +38,15 @@ type filterBuilder struct {
 	inclusionMap    map[string]inclusionType
 }
 
-func buildPath(parts []string) string {
-	result := ""
-	for _, part := range parts {
-		if len(result) == 0 {
-			result = part
-		} else {
-			result = result + "/" + part
-		}
-	}
-	return result
-}
-
 func (b *filterBuilder) getInclusion(path string) inclusionType {
 	existingValue, hasExisting := b.inclusionMap[path]
 	if !hasExisting {
-		return inclusionType_unknown
+		return inclusionTypeUnknown
 	}
 	return existingValue
 }
 
+// getIsIncludedFromCache returns how the configuration see the file
 func (b *filterBuilder) getIsIncludedFromCache(path string) configuration.InclusionResult {
 	existing, ok := b.isIncludedCache[path]
 	if ok {
@@ -64,7 +59,7 @@ func (b *filterBuilder) getIsIncludedFromCache(path string) configuration.Inclus
 }
 
 func isIncluded(v inclusionType) bool {
-	return v == inclusionType_included_implicit || v == inclusionType_included_explicit
+	return v == inclusionTypeIncludedImplicit || v == inclusionTypeIncludedExplicit
 }
 
 type inclusionComputationResult struct {
@@ -94,30 +89,30 @@ func (b *filterBuilder) computeInclusionType(pathString string, includedByParent
 			return result, fmt.Errorf("Element at path %s was included and is now found as excluded", pathString)
 		}
 
-		result.newValue = inclusionType_excluded_explicit
+		result.newValue = inclusionTypeExcludedExplicit
 		result.needToBeExplored = false
 		return result, nil
 	}
 
 	if (configuredInclusion == configuration.IncludedWithChildren) || includedByParent {
-		if existingValue == inclusionType_excluded_explicit {
+		if existingValue == inclusionTypeExcludedExplicit {
 			return result, fmt.Errorf("Element at path %s was excluded and is now included", pathString)
 		}
 
-		result.newValue = inclusionType_included_explicit
+		result.newValue = inclusionTypeIncludedExplicit
 		result.needToBeExplored = !isIncluded(existingValue)
 		return result, nil
 	}
 
 	if configuredInclusion == configuration.IncludedWithoutChildren {
-		if existingValue == inclusionType_excluded_explicit {
+		if existingValue == inclusionTypeExcludedExplicit {
 			return result, fmt.Errorf("Element at path %s was excluded and is now included", pathString)
 		}
 
-		if existingValue == inclusionType_included_explicit {
-			result.newValue = inclusionType_included_explicit
+		if existingValue == inclusionTypeIncludedExplicit {
+			result.newValue = inclusionTypeIncludedExplicit
 		} else {
-			result.newValue = inclusionType_included_implicit
+			result.newValue = inclusionTypeIncludedImplicit
 		}
 		result.needToBeExplored = !isIncluded(existingValue)
 		return result, nil
@@ -129,7 +124,7 @@ func (b *filterBuilder) computeInclusionType(pathString string, includedByParent
 }
 
 func (b *filterBuilder) includeAny(path []string, includedByParent bool) (bool, bool, error) {
-	pathString := buildPath(path)
+	pathString := utils.BuildPath(path)
 	result, err := b.computeInclusionType(pathString, includedByParent)
 	if err != nil {
 		return false, false, err
@@ -351,7 +346,7 @@ func BuildIncluded(descriptors []*desc.FileDescriptor, configuration *configurat
 
 	for path, inclusionType := range inclusions {
 		switch inclusionType {
-		case inclusionType_included_implicit, inclusionType_included_explicit:
+		case inclusionTypeIncludedImplicit, inclusionTypeIncludedExplicit:
 			result[path] = true
 		default:
 			result[path] = false

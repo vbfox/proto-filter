@@ -7,7 +7,7 @@ import (
 	"github.com/jhump/protoreflect/desc"
 	"github.com/jhump/protoreflect/desc/builder"
 	"github.com/vbfox/proto-filter/configuration"
-	"github.com/vbfox/proto-filter/included"
+	"github.com/vbfox/proto-filter/internal/included"
 )
 
 type filteringState struct {
@@ -20,11 +20,11 @@ type filteringState struct {
 const (
 	// File_packageTag is the tag number of the package element in a file
 	// descriptor proto.
-	file_packageTag = 2
+	filePackageTag = 2
 
 	// File_syntaxTag is the tag number of the syntax element in a file
 	// descriptor proto.
-	file_syntaxTag = 12
+	fileSyntaxTag = 12
 )
 
 func (s *filteringState) RunFilter() error {
@@ -39,8 +39,18 @@ func (s *filteringState) RunFilter() error {
 }
 
 func (s *filteringState) AddField(mb *builder.MessageBuilder, field *desc.FieldDescriptor) error {
-	//builder.FieldTypeScalar(field.GetType())
-	//fb := builder.NewField(field.GetName(), field.GetType())
+	var fieldType *builder.FieldType
+
+	messageType := field.GetMessageType()
+	if messageType != nil {
+
+		builder.FieldTypeMessage()
+	} else {
+		builder.FieldTypeScalar(field.GetType())
+	}
+
+	fb := builder.NewField(field.GetName(), field.GetType())
+	mb.AddField(fb)
 	return nil
 }
 
@@ -69,9 +79,9 @@ func setAllComments(fileBuilder *builder.FileBuilder, descriptor *desc.FileDescr
 	// find syntax and package comments, too
 	for _, loc := range descriptor.AsFileDescriptorProto().GetSourceCodeInfo().GetLocation() {
 		if len(loc.Path) == 1 {
-			if loc.Path[0] == file_syntaxTag {
+			if loc.Path[0] == fileSyntaxTag {
 				setComments(&fileBuilder.SyntaxComments, loc)
-			} else if loc.Path[0] == file_packageTag {
+			} else if loc.Path[0] == filePackageTag {
 				setComments(&fileBuilder.PackageComments, loc)
 			}
 		}
