@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestEmptyFile(t *testing.T) {
+func TestLoadingEmptyFile(t *testing.T) {
 	assert := require.New(t)
 
 	yml := ``
@@ -19,7 +19,7 @@ func TestEmptyFile(t *testing.T) {
 	assert.Empty(result.Exclude)
 }
 
-func TestSimpleFile(t *testing.T) {
+func TestLoadingSimpleFile(t *testing.T) {
 	assert := require.New(t)
 
 	yml := `
@@ -43,7 +43,7 @@ exclude:
 	assert.True(exclude1.isLeaf())
 }
 
-func TestSampleFile(t *testing.T) {
+func TestLoadingSampleFile(t *testing.T) {
 	assert := require.New(t)
 
 	yml := `
