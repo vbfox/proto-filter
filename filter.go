@@ -101,13 +101,17 @@ func (s *filteringState) AddFileDescriptor(descriptor *desc.FileDescriptor) erro
 	return nil
 }
 
-func initState(descriptors []*desc.FileDescriptor, config *configuration.Configuration) *filteringState {
+func initState(descriptors []*desc.FileDescriptor, config *configuration.Configuration) (*filteringState, error) {
+	included, err := included.BuildIncluded(descriptors, config)
+	if err != nil {
+		return nil, err
+	}
 	return &filteringState{
 		descriptors: descriptors,
 		config:      config,
 		builders:    []*builder.FileBuilder{},
-		included:    included.BuildIncluded(descriptors, config),
-	}
+		included:    included,
+	}, nil
 }
 
 func (s *filteringState) GetDescriptors() ([]*desc.FileDescriptor, error) {
@@ -125,9 +129,12 @@ func (s *filteringState) GetDescriptors() ([]*desc.FileDescriptor, error) {
 }
 
 func FilterSet(descriptors []*desc.FileDescriptor, config *configuration.Configuration) ([]*desc.FileDescriptor, error) {
-	state := initState(descriptors, config)
+	state, err := initState(descriptors, config)
+	if err != nil {
+		return nil, err
+	}
 
-	err := state.RunFilter()
+	err = state.RunFilter()
 	if err != nil {
 		return nil, err
 	}
