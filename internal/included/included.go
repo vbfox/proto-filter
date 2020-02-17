@@ -32,10 +32,20 @@ func (s inclusionType) String() string {
 	}[s]
 }
 
+type IncludedDescriptor struct {
+	path       string
+	descriptor desc.Descriptor
+}
+
+type descriptorInclusionInfo struct {
+	inclusion  inclusionType
+	publicInfo *IncludedDescriptor
+}
+
 type filterBuilder struct {
 	configuration   *configuration.Configuration
 	isIncludedCache map[string]configuration.InclusionResult
-	inclusionMap    map[string]inclusionType
+	inclusionMap    map[string]descriptorInclusionInfo
 }
 
 func (b *filterBuilder) getInclusion(path string) inclusionType {
@@ -43,7 +53,7 @@ func (b *filterBuilder) getInclusion(path string) inclusionType {
 	if !hasExisting {
 		return inclusionTypeUnknown
 	}
-	return existingValue
+	return existingValue.inclusion
 }
 
 // getIsIncludedFromCache returns how the configuration see the file
@@ -123,7 +133,7 @@ func (b *filterBuilder) computeInclusionType(pathString string, includedByParent
 	return result, nil
 }
 
-func (b *filterBuilder) includeAny(path []string, includedByParent bool) (bool, bool, error) {
+func (b *filterBuilder) includeAny(descriptor desc.Descriptor, path []string, includedByParent bool) (bool, bool, error) {
 	pathString := utils.BuildPath(path)
 	result, err := b.computeInclusionType(pathString, includedByParent)
 	if err != nil {
@@ -132,35 +142,20 @@ func (b *filterBuilder) includeAny(path []string, includedByParent bool) (bool, 
 
 	fmt.Printf("Inclusion result: %v: %+v\n", result.newValue, result)
 
-	b.inclusionMap[pathString] = result.newValue
+	b.inclusionMap[pathString] = descriptorInclusionInfo{
+		inclusion: result.newValue,
+		publicInfo: &IncludedDescriptor{
+			path:       pathString,
+			descriptor: descriptor,
+		},
+	}
 
 	return result.needToBeExplored, result.childInclude, nil
 }
 
-func reverseStringSlice(ss []string) {
-	last := len(ss) - 1
-	for i := 0; i < len(ss)/2; i++ {
-		ss[i], ss[last-i] = ss[last-i], ss[i]
-	}
-}
-
-func getDescriptorPath(descriptor desc.Descriptor) []string {
-	result := []string{}
-	current := descriptor.GetParent()
-	for {
-		if current == nil {
-			break
-		}
-		result = append(result, current.GetName())
-		current = current.GetParent()
-	}
-	reverseStringSlice(result)
-	return result
-}
-
 func (b *filterBuilder) includeField(descriptor *desc.FieldDescriptor, path []string, includedByParent bool) error {
 	currentPath := append(path, descriptor.GetName())
-	ok, childInclude, err := b.includeAny(currentPath, includedByParent)
+	ok, childInclude, err := b.includeAny(descriptor, currentPath, includedByParent)
 	if !ok {
 		return err
 	}
@@ -170,14 +165,14 @@ func (b *filterBuilder) includeField(descriptor *desc.FieldDescriptor, path []st
 		if messageType.IsMapEntry() {
 			keyMessage := descriptor.GetMapKeyType().GetMessageType()
 			if keyMessage != nil {
-				err = b.includeMessage(keyMessage, getDescriptorPath(keyMessage), childInclude)
+				err = b.includeMessage(keyMessage, utils.GetDescriptorPath(keyMessage), childInclude)
 			}
 			if err == nil {
 				valueMessage := descriptor.GetMapValueType().GetMessageType()
-				err = b.includeMessage(valueMessage, getDescriptorPath(valueMessage), childInclude)
+				err = b.includeMessage(valueMessage, utils.GetDescriptorPath(valueMessage), childInclude)
 			}
 		} else {
-			err = b.includeMessage(messageType, getDescriptorPath(messageType), childInclude)
+			err = b.includeMessage(messageType, utils.GetDescriptorPath(messageType), childInclude)
 		}
 	}
 
@@ -197,7 +192,7 @@ func (b *filterBuilder) includeMessage(descriptor *desc.MessageDescriptor, path 
 		return nil
 	}
 
-	ok, childInclude, err := b.includeAny(currentPath, includedByParent)
+	ok, childInclude, err := b.includeAny(descriptor, currentPath, includedByParent)
 	if !ok {
 		return err
 	}
@@ -225,13 +220,13 @@ func (b *filterBuilder) includeMessage(descriptor *desc.MessageDescriptor, path 
 
 func (b *filterBuilder) includeEnumValue(descriptor *desc.EnumValueDescriptor, path []string, includedByParent bool) error {
 	currentPath := append(path, descriptor.GetName())
-	_, _, err := b.includeAny(currentPath, includedByParent)
+	_, _, err := b.includeAny(descriptor, currentPath, includedByParent)
 	return err
 }
 
 func (b *filterBuilder) includeEnum(descriptor *desc.EnumDescriptor, path []string, includedByParent bool) error {
 	currentPath := append(path, descriptor.GetName())
-	ok, childInclude, err := b.includeAny(currentPath, includedByParent)
+	ok, childInclude, err := b.includeAny(descriptor, currentPath, includedByParent)
 	if !ok {
 		return err
 	}
@@ -247,19 +242,19 @@ func (b *filterBuilder) includeEnum(descriptor *desc.EnumDescriptor, path []stri
 
 func (b *filterBuilder) includeServiceMethod(descriptor *desc.MethodDescriptor, path []string, includedByParent bool) error {
 	currentPath := append(path, descriptor.GetName())
-	ok, childInclude, err := b.includeAny(currentPath, includedByParent)
+	ok, childInclude, err := b.includeAny(descriptor, currentPath, includedByParent)
 	if !ok {
 		return err
 	}
 
 	inputType := descriptor.GetInputType()
-	err = b.includeMessage(inputType, getDescriptorPath(inputType), childInclude)
+	err = b.includeMessage(inputType, utils.GetDescriptorPath(inputType), childInclude)
 	if err != nil {
 		return err
 	}
 
 	outputType := descriptor.GetOutputType()
-	err = b.includeMessage(outputType, getDescriptorPath(outputType), childInclude)
+	err = b.includeMessage(outputType, utils.GetDescriptorPath(outputType), childInclude)
 	if err != nil {
 		return err
 	}
@@ -269,7 +264,7 @@ func (b *filterBuilder) includeServiceMethod(descriptor *desc.MethodDescriptor, 
 
 func (b *filterBuilder) includeService(descriptor *desc.ServiceDescriptor, path []string, includedByParent bool) error {
 	currentPath := append(path, descriptor.GetName())
-	ok, childInclude, err := b.includeAny(currentPath, includedByParent)
+	ok, childInclude, err := b.includeAny(descriptor, currentPath, includedByParent)
 	if !ok {
 		return err
 	}
@@ -285,7 +280,7 @@ func (b *filterBuilder) includeService(descriptor *desc.ServiceDescriptor, path 
 
 func (b *filterBuilder) includeFileDescriptor(descriptor *desc.FileDescriptor, path []string, includedByParent bool) error {
 	currentPath := append(path, descriptor.GetName())
-	ok, childInclude, err := b.includeAny(currentPath, includedByParent)
+	ok, childInclude, err := b.includeAny(descriptor, currentPath, includedByParent)
 	if !ok {
 		return err
 	}
@@ -311,11 +306,11 @@ func (b *filterBuilder) includeFileDescriptor(descriptor *desc.FileDescriptor, p
 	return nil
 }
 
-func buildInclusions(descriptors []*desc.FileDescriptor, cfg *configuration.Configuration) (map[string]inclusionType, error) {
+func buildInclusions(descriptors []*desc.FileDescriptor, cfg *configuration.Configuration) (map[string]descriptorInclusionInfo, error) {
 	builder := filterBuilder{
 		isIncludedCache: make(map[string]configuration.InclusionResult),
 		configuration:   cfg,
-		inclusionMap:    make(map[string]inclusionType),
+		inclusionMap:    make(map[string]descriptorInclusionInfo),
 	}
 
 	for _, descriptor := range descriptors {
@@ -329,8 +324,8 @@ func buildInclusions(descriptors []*desc.FileDescriptor, cfg *configuration.Conf
 
 // BuildIncluded create a map of every file, message, enum, field  and service that can be
 // encountered and if they are included or not
-func BuildIncluded(descriptors []*desc.FileDescriptor, configuration *configuration.Configuration) (map[string]bool, error) {
-	result := make(map[string]bool)
+func BuildIncluded(descriptors []*desc.FileDescriptor, configuration *configuration.Configuration) (map[string]*IncludedDescriptor, error) {
+	result := make(map[string]*IncludedDescriptor)
 
 	fmt.Printf("==================================================================\n")
 	fmt.Printf("==================================================================\n")
@@ -344,12 +339,10 @@ func BuildIncluded(descriptors []*desc.FileDescriptor, configuration *configurat
 		return result, err
 	}
 
-	for path, inclusionType := range inclusions {
-		switch inclusionType {
+	for path, inclusionInfo := range inclusions {
+		switch inclusionInfo.inclusion {
 		case inclusionTypeIncludedImplicit, inclusionTypeIncludedExplicit:
-			result[path] = true
-		default:
-			result[path] = false
+			result[path] = inclusionInfo.publicInfo
 		}
 	}
 

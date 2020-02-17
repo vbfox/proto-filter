@@ -11,7 +11,7 @@ import (
 
 type keyValuePair struct {
 	Key   string
-	Value bool
+	Value *IncludedDescriptor
 }
 
 type ListOfPairs []keyValuePair
@@ -31,7 +31,7 @@ func (l ListOfPairs) Swap(i, j int) {
 	l[i], l[j] = l[j], l[i]
 }
 
-func mkListOfPairs(m map[string]bool) ListOfPairs {
+func mkListOfPairs(m map[string]*IncludedDescriptor) ListOfPairs {
 	result := make(ListOfPairs, len(m))
 	i := 0
 	for key, value := range m {
@@ -42,18 +42,12 @@ func mkListOfPairs(m map[string]bool) ListOfPairs {
 	return result
 }
 
-func mapToString(m map[string]bool) string {
+func mapToString(m map[string]*IncludedDescriptor) string {
 	pairs := mkListOfPairs(m)
 	sort.Sort(pairs)
 
 	var str strings.Builder
 	for _, pair := range pairs {
-		if pair.Value {
-			str.WriteString("+ ")
-		} else {
-			str.WriteString("- ")
-		}
-
 		str.WriteString(pair.Key)
 		str.WriteString("\n")
 	}
@@ -88,10 +82,10 @@ message msg_a {
 }
 `,
 		`
-+ test.proto
-+ test.proto/msg_a
-+ test.proto/msg_a/field_a_1
-+ test.proto/msg_a/field_a_2
+test.proto
+test.proto/msg_a
+test.proto/msg_a/field_a_1
+test.proto/msg_a/field_a_2
 `,
 	)
 }
@@ -117,10 +111,9 @@ message msg_a {
 }
 `,
 		`
-+ test.proto
-+ test.proto/msg_a
-+ test.proto/msg_a/field_a_1
-- test.proto/msg_a/field_a_2
+test.proto
+test.proto/msg_a
+test.proto/msg_a/field_a_1
 `,
 	)
 }
@@ -144,10 +137,9 @@ message msg_b {
 }
 `,
 		`
-+ test.proto
-+ test.proto/msg_a
-+ test.proto/msg_a/field_a_1
-- test.proto/msg_b
+test.proto
+test.proto/msg_a
+test.proto/msg_a/field_a_1
 `,
 	)
 }
@@ -170,10 +162,9 @@ message msg_a {
 }
 `,
 		`
-+ test.proto
-+ test.proto/msg_a
-+ test.proto/msg_a/field_a_1
-- test.proto/msg_a/field_a_2
+test.proto
+test.proto/msg_a
+test.proto/msg_a/field_a_1
 `,
 	)
 }
@@ -198,11 +189,10 @@ message msg_a {
 }
 `,
 		`
-+ test.proto
-+ test.proto/msg_a
-- test.proto/msg_a/field_a_1
-+ test.proto/msg_a/msg_b
-+ test.proto/msg_a/msg_b/field_b_1
+test.proto
+test.proto/msg_a
+test.proto/msg_a/msg_b
+test.proto/msg_a/msg_b/field_b_1
 `,
 	)
 }
@@ -226,11 +216,11 @@ message msg_b {
 }
 `,
 		`
-+ test.proto
-+ test.proto/msg_a
-+ test.proto/msg_a/field_a_1
-+ test.proto/msg_b
-+ test.proto/msg_b/field_b_1
+test.proto
+test.proto/msg_a
+test.proto/msg_a/field_a_1
+test.proto/msg_b
+test.proto/msg_b/field_b_1
 `,
 	)
 }
@@ -254,11 +244,11 @@ message msg_b {
 }
 `,
 		`
-+ test.proto
-+ test.proto/msg_a
-+ test.proto/msg_a/field_a_1
-+ test.proto/msg_b
-+ test.proto/msg_b/field_b_1
+test.proto
+test.proto/msg_a
+test.proto/msg_a/field_a_1
+test.proto/msg_b
+test.proto/msg_b/field_b_1
 `,
 	)
 }
@@ -282,11 +272,11 @@ message msg_b {
 }
 `,
 		`
-+ test.proto
-+ test.proto/msg_a
-+ test.proto/msg_a/field_a_1
-+ test.proto/msg_b
-+ test.proto/msg_b/field_b_1
+test.proto
+test.proto/msg_a
+test.proto/msg_a/field_a_1
+test.proto/msg_b
+test.proto/msg_b/field_b_1
 `,
 	)
 }
@@ -314,13 +304,13 @@ service svc_a {
 }
 `,
 		`
-+ test.proto
-+ test.proto/msg_a
-+ test.proto/msg_a/field_a_1
-+ test.proto/msg_b
-+ test.proto/msg_b/field_b_1
-+ test.proto/svc_a
-+ test.proto/svc_a/method_a_1
+test.proto
+test.proto/msg_a
+test.proto/msg_a/field_a_1
+test.proto/msg_b
+test.proto/msg_b/field_b_1
+test.proto/svc_a
+test.proto/svc_a/method_a_1
 `,
 	)
 }
@@ -360,16 +350,14 @@ service svc_a {
 }
 `,
 		`
-+ test.proto
-+ test.proto/msg_a
-+ test.proto/msg_a/field_a_1
-+ test.proto/msg_b
-+ test.proto/msg_b/field_b_1
-- test.proto/msg_c
-+ test.proto/svc_a
-+ test.proto/svc_a/method_a_1
-- test.proto/svc_a/method_a_2
-+ test.proto/svc_a/method_a_3
+test.proto
+test.proto/msg_a
+test.proto/msg_a/field_a_1
+test.proto/msg_b
+test.proto/msg_b/field_b_1
+test.proto/svc_a
+test.proto/svc_a/method_a_1
+test.proto/svc_a/method_a_3
 `,
 	)
 }
