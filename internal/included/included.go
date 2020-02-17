@@ -32,6 +32,32 @@ func (s inclusionType) String() string {
 	}[s]
 }
 
+type IncludedFileDescriptor struct {
+	path       string
+	descriptor *desc.FileDescriptor
+	messages   []*IncludedMessageDescriptor
+	enums      []*IncludedEnumDescriptor
+	services   []*IncludedServiceDescriptor
+}
+
+type IncludedMessageDescriptor struct {
+	path       string
+	descriptor *desc.MessageDescriptor
+	fields     []*IncludedFieldDescriptor
+	nested     []*IncludedMessageDescriptor
+	enums      []*IncludedEnumDescriptor
+}
+
+type IncludedFieldDescriptor struct {
+	path       string
+	descriptor *desc.FieldDescriptor
+}
+
+type IncludedEnumDescriptor struct {
+	path       string
+	descriptor *desc.Descriptor
+}
+
 type IncludedDescriptor struct {
 	path       string
 	descriptor desc.Descriptor
