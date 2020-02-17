@@ -146,6 +146,39 @@ test.proto/msg_a/field_a_1
 	)
 }
 
+func TestIncludeNestedMessage(t *testing.T) {
+	runIncludedTest(
+		t,
+		`---
+include:
+  - test.proto:
+    - msg_a
+`,
+		`syntax = "proto3";
+
+message msg_a {
+    msg_b.msg_b_a field_a_1 = 1;
+}
+
+message msg_b {
+    message msg_b_a {
+        string field_b_a_1 = 1;
+    }
+
+    string field_b_1 = 1;
+}
+`,
+		`
+test.proto
+test.proto/msg_a
+test.proto/msg_a/field_a_1
+test.proto/msg_b
+test.proto/msg_b/msg_b_a
+test.proto/msg_a/msg_b_a/field_b_a_1
+`,
+	)
+}
+
 func TestPartialIncludeField(t *testing.T) {
 	runIncludedTest(
 		t,
