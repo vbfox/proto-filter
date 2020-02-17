@@ -8,13 +8,38 @@ import (
 	"github.com/jhump/protoreflect/desc/builder"
 	"github.com/vbfox/proto-filter/configuration"
 	"github.com/vbfox/proto-filter/internal/included"
+	"github.com/vbfox/proto-filter/internal/utils"
 )
+
+type fileState struct {
+	builder    *builder.FileBuilder
+	descriptor *desc.FileDescriptor
+}
+
+type messageState struct {
+	builder    *builder.MessageBuilder
+	descriptor *desc.MessageDescriptor
+}
+
+type enumState struct {
+	builder    *builder.EnumBuilder
+	descriptor *desc.EnumDescriptor
+}
+
+type serviceState struct {
+	builder    *builder.ServiceBuilder
+	descriptor *desc.ServiceDescriptor
+}
 
 type filteringState struct {
 	descriptors []*desc.FileDescriptor
 	config      *configuration.Configuration
-	builders    []*builder.FileBuilder
 	included    map[string]bool
+
+	fileBuilders    map[string]fileState
+	messageBuilders map[string]messageState
+	enumBuilders    map[string]enumState
+	serviceBuilders map[string]serviceState
 }
 
 const (
@@ -26,17 +51,6 @@ const (
 	// descriptor proto.
 	fileSyntaxTag = 12
 )
-
-func (s *filteringState) RunFilter() error {
-	for _, descriptor := range s.descriptors {
-		err := s.AddFileDescriptor(descriptor)
-		if err != nil {
-			return fmt.Errorf("Failed to filter file %s: %w", descriptor.GetName(), err)
-		}
-	}
-
-	return nil
-}
 
 func (s *filteringState) AddField(mb *builder.MessageBuilder, field *desc.FieldDescriptor) error {
 	var fieldType *builder.FieldType
@@ -95,8 +109,9 @@ func setFileBasicInfo(fileBuilder *builder.FileBuilder, descriptor *desc.FileDes
 }
 
 func (s *filteringState) AddFileDescriptor(descriptor *desc.FileDescriptor) error {
+    path := utils.GetDescriptorPathString(descriptor)
 	fb := builder.NewFile(descriptor.GetName())
-	s.builders = append(s.builders, fb)
+	s.fileBuilders[] = fileState{descriptor: descriptor, builder: fb}
 
 	setFileBasicInfo(fb, descriptor)
 	setAllComments(fb, descriptor)
@@ -117,10 +132,13 @@ func initState(descriptors []*desc.FileDescriptor, config *configuration.Configu
 		return nil, err
 	}
 	return &filteringState{
-		descriptors: descriptors,
-		config:      config,
-		builders:    []*builder.FileBuilder{},
-		included:    included,
+		descriptors:     descriptors,
+		config:          config,
+		included:        included,
+		fileBuilders:    map[string]fileState{},
+		messageBuilders: map[string]messageState{},
+		enumBuilders:    map[string]enumState{},
+		serviceBuilders: map[string]serviceState{},
 	}, nil
 }
 
@@ -136,6 +154,17 @@ func (s *filteringState) GetDescriptors() ([]*desc.FileDescriptor, error) {
 	}
 
 	return result, nil
+}
+
+func (s *filteringState) RunFilter() error {
+	for _, descriptor := range s.descriptors {
+		err := s.AddFileDescriptor(descriptor)
+		if err != nil {
+			return fmt.Errorf("Failed to filter file %s: %w", descriptor.GetName(), err)
+		}
+	}
+
+	return nil
 }
 
 func FilterSet(descriptors []*desc.FileDescriptor, config *configuration.Configuration) ([]*desc.FileDescriptor, error) {
