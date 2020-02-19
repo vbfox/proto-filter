@@ -11,7 +11,7 @@ import (
 
 type keyValuePair struct {
 	Key   string
-	Value *IncludedDescriptor
+	Value inclusionType
 }
 
 type ListOfPairs []keyValuePair
@@ -31,7 +31,7 @@ func (l ListOfPairs) Swap(i, j int) {
 	l[i], l[j] = l[j], l[i]
 }
 
-func mkListOfPairs(m map[string]*IncludedDescriptor) ListOfPairs {
+func mkListOfPairs(m map[string]inclusionType) ListOfPairs {
 	result := make(ListOfPairs, len(m))
 	i := 0
 	for key, value := range m {
@@ -42,7 +42,7 @@ func mkListOfPairs(m map[string]*IncludedDescriptor) ListOfPairs {
 	return result
 }
 
-func mapToString(m map[string]*IncludedDescriptor) string {
+func mapToString(m map[string]inclusionType) string {
 	pairs := mkListOfPairs(m)
 	sort.Sort(pairs)
 
