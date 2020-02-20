@@ -49,13 +49,9 @@ func mapToString(m map[string]bool) string {
 	var str strings.Builder
 	for _, pair := range pairs {
 		if pair.Value {
-			str.WriteString("+ ")
-		} else {
-			str.WriteString("- ")
+			str.WriteString(pair.Key)
+			str.WriteString("\n")
 		}
-
-		str.WriteString(pair.Key)
-		str.WriteString("\n")
 	}
 
 	return str.String()
@@ -88,10 +84,10 @@ message msg_a {
 }
 `,
 		`
-+ test.proto
-+ test.proto/msg_a
-+ test.proto/msg_a/field_a_1
-+ test.proto/msg_a/field_a_2
+test.proto
+test.proto/msg_a
+test.proto/msg_a/field_a_1
+test.proto/msg_a/field_a_2
 `,
 	)
 }
@@ -117,10 +113,9 @@ message msg_a {
 }
 `,
 		`
-+ test.proto
-+ test.proto/msg_a
-+ test.proto/msg_a/field_a_1
-- test.proto/msg_a/field_a_2
+test.proto
+test.proto/msg_a
+test.proto/msg_a/field_a_1
 `,
 	)
 }
@@ -144,10 +139,9 @@ message msg_b {
 }
 `,
 		`
-+ test.proto
-+ test.proto/msg_a
-+ test.proto/msg_a/field_a_1
-- test.proto/msg_b
+test.proto
+test.proto/msg_a
+test.proto/msg_a/field_a_1
 `,
 	)
 }
@@ -170,10 +164,9 @@ message msg_a {
 }
 `,
 		`
-+ test.proto
-+ test.proto/msg_a
-+ test.proto/msg_a/field_a_1
-- test.proto/msg_a/field_a_2
+test.proto
+test.proto/msg_a
+test.proto/msg_a/field_a_1
 `,
 	)
 }
@@ -198,11 +191,10 @@ message msg_a {
 }
 `,
 		`
-+ test.proto
-+ test.proto/msg_a
-- test.proto/msg_a/field_a_1
-+ test.proto/msg_a/msg_b
-+ test.proto/msg_a/msg_b/field_b_1
+test.proto
+test.proto/msg_a
+test.proto/msg_a/msg_b
+test.proto/msg_a/msg_b/field_b_1
 `,
 	)
 }
@@ -226,11 +218,11 @@ message msg_b {
 }
 `,
 		`
-+ test.proto
-+ test.proto/msg_a
-+ test.proto/msg_a/field_a_1
-+ test.proto/msg_b
-+ test.proto/msg_b/field_b_1
+test.proto
+test.proto/msg_a
+test.proto/msg_a/field_a_1
+test.proto/msg_b
+test.proto/msg_b/field_b_1
 `,
 	)
 }
@@ -254,11 +246,11 @@ message msg_b {
 }
 `,
 		`
-+ test.proto
-+ test.proto/msg_a
-+ test.proto/msg_a/field_a_1
-+ test.proto/msg_b
-+ test.proto/msg_b/field_b_1
+test.proto
+test.proto/msg_a
+test.proto/msg_a/field_a_1
+test.proto/msg_b
+test.proto/msg_b/field_b_1
 `,
 	)
 }
@@ -282,11 +274,11 @@ message msg_b {
 }
 `,
 		`
-+ test.proto
-+ test.proto/msg_a
-+ test.proto/msg_a/field_a_1
-+ test.proto/msg_b
-+ test.proto/msg_b/field_b_1
+test.proto
+test.proto/msg_a
+test.proto/msg_a/field_a_1
+test.proto/msg_b
+test.proto/msg_b/field_b_1
 `,
 	)
 }
@@ -314,13 +306,13 @@ service svc_a {
 }
 `,
 		`
-+ test.proto
-+ test.proto/msg_a
-+ test.proto/msg_a/field_a_1
-+ test.proto/msg_b
-+ test.proto/msg_b/field_b_1
-+ test.proto/svc_a
-+ test.proto/svc_a/method_a_1
+test.proto
+test.proto/msg_a
+test.proto/msg_a/field_a_1
+test.proto/msg_b
+test.proto/msg_b/field_b_1
+test.proto/svc_a
+test.proto/svc_a/method_a_1
 `,
 	)
 }
@@ -360,16 +352,14 @@ service svc_a {
 }
 `,
 		`
-+ test.proto
-+ test.proto/msg_a
-+ test.proto/msg_a/field_a_1
-+ test.proto/msg_b
-+ test.proto/msg_b/field_b_1
-- test.proto/msg_c
-+ test.proto/svc_a
-+ test.proto/svc_a/method_a_1
-- test.proto/svc_a/method_a_2
-+ test.proto/svc_a/method_a_3
+test.proto
+test.proto/msg_a
+test.proto/msg_a/field_a_1
+test.proto/msg_b
+test.proto/msg_b/field_b_1
+test.proto/svc_a
+test.proto/svc_a/method_a_1
+test.proto/svc_a/method_a_3
 `,
 	)
 }
