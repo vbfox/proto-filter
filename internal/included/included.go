@@ -106,16 +106,21 @@ type descriptorInclusionInfo struct {
 	publicInfo IncludedDescriptor
 }
 
+type inclusionInfo struct {
+	InclusionType      inclusionType
+	IncludedDescriptor IncludedDescriptor
+}
+
 type filterBuilder struct {
 	configuration   *configuration.Configuration
 	isIncludedCache map[string]configuration.InclusionResult
-	inclusionMap    map[string]inclusionType
+	inclusionMap    map[string]*inclusionInfo
 }
 
-func (b *filterBuilder) getInclusion(path string) inclusionType {
+func (b *filterBuilder) getInclusion(path string) *inclusionInfo {
 	existingValue, hasExisting := b.inclusionMap[path]
 	if !hasExisting {
-		return inclusionTypeUnknown
+		return nil
 	}
 	return existingValue
 }
@@ -138,7 +143,7 @@ func isIncluded(v inclusionType) bool {
 
 type inclusionComputationResult struct {
 	configuredInclusion configuration.InclusionResult
-	existingValue       inclusionType
+	existingInclusion   *inclusionInfo
 	newValue            inclusionType
 	needToBeExplored    bool
 	childInclude        bool
@@ -148,10 +153,11 @@ func (b *filterBuilder) computeInclusionType(pathString string, includedByParent
 	result := inclusionComputationResult{}
 
 	configuredInclusion := b.getIsIncludedFromCache(pathString)
-	existingValue := b.getInclusion(pathString)
+	existingInclusion := b.getInclusion(pathString)
+	existingValue := existingInclusion.InclusionType
 
 	result.configuredInclusion = configuredInclusion
-	result.existingValue = existingValue
+	result.existingInclusion = existingInclusion
 	result.childInclude = includedByParent || (configuredInclusion == configuration.IncludedWithChildren)
 
 	fmt.Printf("\n")
@@ -197,32 +203,47 @@ func (b *filterBuilder) computeInclusionType(pathString string, includedByParent
 	return result, nil
 }
 
-func (b *filterBuilder) includeAny(descriptor desc.Descriptor, pathString string, includedByParent bool) (bool, bool, error) {
+type createIncludeDescriptor func() IncludedDescriptor
+
+func (b *filterBuilder) includeAny(descriptor desc.Descriptor, pathString string, includedByParent bool, creator createIncludeDescriptor) (bool, bool, *inclusionInfo, error) {
 	result, err := b.computeInclusionType(pathString, includedByParent)
 	if err != nil {
-		return false, false, err
+		return false, false, nil, err
 	}
 
 	fmt.Printf("Inclusion result: %v: %+v\n", result.newValue, result)
 
-	b.inclusionMap[pathString] = result.newValue
+	var info *inclusionInfo
+	if result.existingInclusion != nil {
+		info = result.existingInclusion
+		info.InclusionType = result.newValue
+	} else {
+		info = &inclusionInfo{
+			InclusionType:      result.newValue,
+			IncludedDescriptor: creator(),
+		}
+		b.inclusionMap[pathString] = info
+	}
 
-	return result.needToBeExplored, result.childInclude, nil
+	return result.needToBeExplored, result.childInclude, info, nil
 }
 
 func (b *filterBuilder) includeField(descriptor *desc.FieldDescriptor, path []string, includedByParent bool) (*IncludedFieldDescriptor, error) {
 	currentPath := append(path, descriptor.GetName())
 	pathString := utils.BuildPath(currentPath)
 
-	ok, childInclude, err := b.includeAny(descriptor, pathString, includedByParent)
+	ok, childInclude, info, err := b.includeAny(descriptor, pathString, includedByParent, func() IncludedDescriptor {
+		return &IncludedFieldDescriptor{
+			path:       pathString,
+			descriptor: descriptor,
+		}
+	})
+
 	if !ok {
 		return nil, err
 	}
 
-	includedDescriptor := &IncludedFieldDescriptor{
-		path:       pathString,
-		descriptor: descriptor,
-	}
+	d := info.IncludedDescriptor.(*IncludedFieldDescriptor)
 
 	messageType := descriptor.GetMessageType()
 	if messageType != nil {
@@ -244,7 +265,7 @@ func (b *filterBuilder) includeField(descriptor *desc.FieldDescriptor, path []st
 		return nil, fmt.Errorf("Failed to include field %s: %w", currentPath, err)
 	}
 
-	return includedDescriptor, nil
+	return d, nil
 }
 
 func (b *filterBuilder) includeMessage(descriptor *desc.MessageDescriptor, path []string, includedByParent bool) (*IncludedMessageDescriptor, error) {
@@ -497,5 +518,6 @@ func BuildIncluded(descriptors []*desc.FileDescriptor, configuration *configurat
 		}
 	}
 
+	fmt.Printf("%+v\n", result)
 	return result, nil
 }

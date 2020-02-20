@@ -45,7 +45,6 @@ func mkListOfPairs(m map[string]inclusionType) ListOfPairs {
 func mapToString(m map[string]inclusionType) string {
 	pairs := mkListOfPairs(m)
 	sort.Sort(pairs)
-
 	var str strings.Builder
 	for _, pair := range pairs {
 		str.WriteString(pair.Key)
