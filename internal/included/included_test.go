@@ -64,6 +64,11 @@ func runIncludedTest(t *testing.T, config string, input string, expected string)
 	result, err := BuildIncluded(inputDesc, parsedConfig)
 	assert.NoError(err)
 	actual := mapToString(result)
+
+	expectedParts := strings.Split(expected, "\n")
+	sort.Strings(expectedParts)
+	expected = strings.Join(expectedParts, "\n")
+
 	assert.Equal(strings.Trim(expected, " \t\r\n"), strings.Trim(actual, " \t\r\n"))
 }
 
@@ -85,9 +90,9 @@ message msg_a {
 `,
 		`
 test.proto
-test.proto/msg_a
-test.proto/msg_a/field_a_1
-test.proto/msg_a/field_a_2
+msg_a
+msg_a.field_a_1
+msg_a.field_a_2
 `,
 	)
 }
@@ -114,8 +119,8 @@ message msg_a {
 `,
 		`
 test.proto
-test.proto/msg_a
-test.proto/msg_a/field_a_1
+msg_a
+msg_a.field_a_1
 `,
 	)
 }
@@ -140,8 +145,8 @@ message msg_b {
 `,
 		`
 test.proto
-test.proto/msg_a
-test.proto/msg_a/field_a_1
+msg_a
+msg_a.field_a_1
 `,
 	)
 }
@@ -170,11 +175,11 @@ message msg_b {
 `,
 		`
 test.proto
-test.proto/msg_a
-test.proto/msg_a/field_a_1
-test.proto/msg_b
-test.proto/msg_b/msg_b_a
-test.proto/msg_a/msg_b_a/field_b_a_1
+msg_a
+msg_a.field_a_1
+msg_b
+msg_b.msg_b_a
+msg_a.msg_b_a.field_b_a_1
 `,
 	)
 }
@@ -198,8 +203,8 @@ message msg_a {
 `,
 		`
 test.proto
-test.proto/msg_a
-test.proto/msg_a/field_a_1
+msg_a
+msg_a.field_a_1
 `,
 	)
 }
@@ -225,9 +230,9 @@ message msg_a {
 `,
 		`
 test.proto
-test.proto/msg_a
-test.proto/msg_a/msg_b
-test.proto/msg_a/msg_b/field_b_1
+msg_a
+msg_a.msg_b
+msg_a.msg_b.field_b_1
 `,
 	)
 }
@@ -252,10 +257,10 @@ message msg_b {
 `,
 		`
 test.proto
-test.proto/msg_a
-test.proto/msg_a/field_a_1
-test.proto/msg_b
-test.proto/msg_b/field_b_1
+msg_a
+msg_a.field_a_1
+msg_b
+msg_b.field_b_1
 `,
 	)
 }
@@ -280,10 +285,10 @@ message msg_b {
 `,
 		`
 test.proto
-test.proto/msg_a
-test.proto/msg_a/field_a_1
-test.proto/msg_b
-test.proto/msg_b/field_b_1
+msg_a
+msg_a.field_a_1
+msg_b
+msg_b.field_b_1
 `,
 	)
 }
@@ -308,10 +313,10 @@ message msg_b {
 `,
 		`
 test.proto
-test.proto/msg_a
-test.proto/msg_a/field_a_1
-test.proto/msg_b
-test.proto/msg_b/field_b_1
+msg_a
+msg_a.field_a_1
+msg_b
+msg_b.field_b_1
 `,
 	)
 }
@@ -340,12 +345,12 @@ service svc_a {
 `,
 		`
 test.proto
-test.proto/msg_a
-test.proto/msg_a/field_a_1
-test.proto/msg_b
-test.proto/msg_b/field_b_1
-test.proto/svc_a
-test.proto/svc_a/method_a_1
+msg_a
+msg_a.field_a_1
+msg_b
+msg_b.field_b_1
+svc_a
+svc_a.method_a_1
 `,
 	)
 }
@@ -386,13 +391,13 @@ service svc_a {
 `,
 		`
 test.proto
-test.proto/msg_a
-test.proto/msg_a/field_a_1
-test.proto/msg_b
-test.proto/msg_b/field_b_1
-test.proto/svc_a
-test.proto/svc_a/method_a_1
-test.proto/svc_a/method_a_3
+msg_a
+msg_a.field_a_1
+msg_b
+msg_b.field_b_1
+svc_a
+svc_a.method_a_1
+svc_a.method_a_3
 `,
 	)
 }
