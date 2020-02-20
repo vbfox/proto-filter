@@ -3,7 +3,6 @@ package protofilter
 import (
 	"fmt"
 
-	dpb "github.com/golang/protobuf/protoc-gen-go/descriptor"
 	"github.com/jhump/protoreflect/desc"
 	"github.com/jhump/protoreflect/desc/builder"
 	"github.com/vbfox/proto-filter/configuration"
@@ -17,27 +16,21 @@ type filteringState struct {
 	included    map[string]bool
 }
 
-const (
-	// File_packageTag is the tag number of the package element in a file
-	// descriptor proto.
-	filePackageTag = 2
-
-	// File_syntaxTag is the tag number of the syntax element in a file
-	// descriptor proto.
-	fileSyntaxTag = 12
-)
+func (s *filteringState) IsIncluded(path string) bool {
+	value, found := s.included[path]
+	return found && value
+}
 
 func (s *filteringState) RunFilter() error {
-	for _, descriptor := range s.descriptors {
-		err := s.AddFileDescriptor(descriptor)
-		if err != nil {
-			return fmt.Errorf("Failed to filter file %s: %w", descriptor.GetName(), err)
-		}
+	err := s.Pass1()
+	if err != nil {
+		return err
 	}
 
 	return nil
 }
 
+/*
 func (s *filteringState) AddField(mb *builder.MessageBuilder, field *desc.FieldDescriptor) error {
 	var fieldType *builder.FieldType
 
@@ -67,39 +60,12 @@ func (s *filteringState) AddMessage(fb *builder.FileBuilder, message *desc.Messa
 	return fb.TryAddMessage(mb)
 }
 
-func setComments(c *builder.Comments, loc *dpb.SourceCodeInfo_Location) {
-	c.LeadingDetachedComments = loc.GetLeadingDetachedComments()
-	c.LeadingComment = loc.GetLeadingComments()
-	c.TrailingComment = loc.GetTrailingComments()
-}
-
-func setAllComments(fileBuilder *builder.FileBuilder, descriptor *desc.FileDescriptor) {
-	setComments(fileBuilder.GetComments(), descriptor.GetSourceInfo())
-
-	// find syntax and package comments, too
-	for _, loc := range descriptor.AsFileDescriptorProto().GetSourceCodeInfo().GetLocation() {
-		if len(loc.Path) == 1 {
-			if loc.Path[0] == fileSyntaxTag {
-				setComments(&fileBuilder.SyntaxComments, loc)
-			} else if loc.Path[0] == filePackageTag {
-				setComments(&fileBuilder.PackageComments, loc)
-			}
-		}
-	}
-}
-
-func setFileBasicInfo(fileBuilder *builder.FileBuilder, descriptor *desc.FileDescriptor) {
-	fileBuilder.IsProto3 = descriptor.IsProto3()
-	fileBuilder.Package = descriptor.GetPackage()
-	fileBuilder.Options = descriptor.GetFileOptions()
-}
-
 func (s *filteringState) AddFileDescriptor(descriptor *desc.FileDescriptor) error {
 	fb := builder.NewFile(descriptor.GetName())
 	s.builders = append(s.builders, fb)
 
-	setFileBasicInfo(fb, descriptor)
-	setAllComments(fb, descriptor)
+	builderutil.SetFileBasicInfo(fb, descriptor)
+	builderutil.SetAllComments(fb, descriptor)
 
 	for _, message := range descriptor.GetMessageTypes() {
 		err := s.AddMessage(fb, message)
@@ -110,6 +76,7 @@ func (s *filteringState) AddFileDescriptor(descriptor *desc.FileDescriptor) erro
 
 	return nil
 }
+*/
 
 func initState(descriptors []*desc.FileDescriptor, config *configuration.Configuration) (*filteringState, error) {
 	included, err := included.BuildIncluded(descriptors, config)
